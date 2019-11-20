@@ -1,0 +1,675 @@
+---
+title: 'Text Analysis in R:'
+author: "Gonçalo Veiga"
+date: "11/19/2019"
+output:
+  ioslides_presentation: default
+  beamer_presentation: default
+subtitle: Sentiment Analysis using tidytext
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+<style>
+div.footnotes {
+  position: absolute;
+  bottom: 0;
+  margin-bottom: 10px;
+  width: 80%;
+  font-size: 0.6em;
+}
+</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script>
+$(document).ready(function() {
+  $('slide:not(.backdrop):not(.title-slide)').append('<div class=\"footnotes\">');
+
+  $('footnote').each(function(index) {
+    var text  = $(this).html();
+    var fnNum = (index+1).toString();
+    $(this).html(fnNum.sup());
+
+    var footnote   = fnNum + '. ' + text + '<br/>';
+    var oldContent = $(this).parents('slide').children('div.footnotes').html();
+    var newContent = oldContent + footnote;
+    $(this).parents('slide').children('div.footnotes').html(newContent);
+  });
+});
+</script>
+
+## About me
+
+![](Images/lotr.jpg)
+
+</br>
+
+> - To pronounce Gonçalo <b>(gon salo)</b> just replace the *ç* with an *s*
+
+
+
+## About me
+<b>Education</b>
+
+- 2008 BA in Applied Psychology, with a specialization in Clinical Psychology
+- 2011 PgD in Social and Cultural Anthropology
+- 2019 (December) MA in Clinical Psychology
+
+<b>Recent work</b>
+
+- Technical trainer
+
+
+
+## Session structure
+
+> - Text mining overview
+> - Sentiment analysis approaches
+> - The *tidytext* package
+> - Lexicons
+> - Perform sentiment analysis
+> - Plot our results and analyze the data
+> - Final Considerations
+
+## What is text mining?
+
+> -  a set of approaches and methods at the intersection of different fields, such as computational linguistics, statistics, computer science
+
+> - textual data as input
+
+> - standard techniques include: text classification, text clustering, document summarization, stylometry, sentiment analysis
+
+## What is text mining?
+
+<b>Sources</b>
+
+- Articles in blogs, newspapers, journals
+- Books
+- Social media
+- Search engines
+- Product reviews
+- Surveys and questionnaires
+- Patient and medical records, etc.
+
+## What is text mining?
+
+<b>Objective:</b> 
+
+> - extract information from textual data to generate actionable insight
+> - support data driven decisions
+
+<b>Challenges</b>
+
+> - unstructured
+> - dirty
+> - context
+
+## Sentiment Analysis
+
+"Sentiment analysis or opinion mining is the computational study of people’s opinions, appraisals, attitudes, and emotions toward entities, individuals, issues, events, topics and their attributes." 
+Liu & Zhang (2012)<footnote>Liu, B. & Zhang, L. (2012). Mining Text Data. Springer: Boston, MA.</footnote>
+
+It allows us to:
+
+> - extract subjectivity
+> - extract polarity or direction
+> - measure intensity
+
+## Two main approaches:
+
+<b>Lexicon or dictionary approach</b>
+
+> - Calculates sentiment in a corpora through the semantic orientation of words or phrases in the documents. 
+> - The dictionaries are usually user-generated. 
+> - Words are annotated with scores or subjectivity values.
+> - They can either be general-purpose or specific-purpose.
+
+Text classification approach
+
+> - Involves building classifiers from labeled instances of text or sentences, in a supervised classification task. 
+> - It can be described as a statistical or machine learning approach.
+
+## Two main techniques:
+
+<b>*Bag-of-Words*</b>
+
+> - treats every word as a unique feature of the document 
+> - word order and grammatical word type are not relevant in the analysis
+> - easy to perform
+
+Semantic parsing
+
+> - based on word syntax: rules that define the components of a sentence
+> - uses Part-of-Speech (PoS) tagging to identify the words in a grammatical or useful context
+> - more sophisticated and complex
+
+
+## Sentiment analysis steps
+
+1. Problem definition: formulate the question
+
+2. Select and collect the appropriate data
+
+3. Organize the data into a corpora. Perform necessary data cleaning. Tokenize the document(s).
+
+4. Apply the sentiment lexicon to the data
+
+5. Visualize and analyze the data
+
+6. Report on your findings and recommendations
+
+## The tidytext package
+
+<div class="columns-2">
+  - Julia Silge and David Robinson (2016)<footnote>Silge, J. & Robinson, D. (2017). Text Mining with R. O'Reilly: Sebastapol, CA.</footnote>
+  - based on tidy data principles
+  - treats text as data frames comprised of individual words
+  - easy to manipulate, summarize and visualize the characteristics of text
+  
+  ![](Images/text_mining_book.png)
+
+</div>
+
+## The `unnest_tokens` function
+
+Let's look at a character vector<footnote>Excerpt from the John Lennon and Paul McCartney's song Strawberry Fields Forever (1967)</footnote>:
+
+```{r echo=TRUE}
+strawberry_ff <- c("Living is easy with eyes closed",
+                   "Misunderstanding all you see",
+                   "It's getting hard to be someone",
+                   "But it all works out",
+                   "It doesn't matter much to me")
+
+strawberry_ff
+```
+
+
+## The `unnest_tokens` function
+
+Turn it into a tidy text dataset:
+
+```{r, message=FALSE, echo=TRUE}
+library(dplyr)
+(strawberry_DF <- tibble(line = 1:5, text = strawberry_ff))
+```
+
+## The `unnest_tokens` function
+
+`tibble` is great because it does not convert strings to factors and it does not not use row names. 
+
+However we still need to tokenize our text for use with the `tidytext` `unnest_tokens()` function:
+
+```{r, message=FALSE, echo=TRUE, results=FALSE}
+library(tidytext)
+
+strawberry_DF %>% 
+  unnest_tokens(word, text)
+```
+
+
+## The `unnest_tokens` function
+
+```{r}
+strawberry_DF %>% 
+  unnest_tokens(word, text)
+```
+
+## The `unnest_tokens` function
+
+The two main arguments in `unnest_tokens()` are columns names:
+
+> - first, we have the output column name which will be created as the text is unnested into a one-word token (`word`)
+
+> - second, we call the source column which contains the text of interest
+
+In addition:
+
+> - The `line` column retains the line number each words belongs to
+
+> - Punctuation has been stripped
+
+> - Tokens have been converted to lowercase
+
+## The `unnest_tokens` function
+
+ ![](Images/flow_chart.png)
+</br>
+
+Formating the text into a `tidy data` structure allows us to manipulate, process, and visualize the data according to a set of tidy tools, such as `dplyr`, `tidyr`, and `gpplot2`.
+
+## Tidying Jane Austen's books
+
+Silge (2017) compiled Jane Austen's six published novels in the `janeaustenr` package<footnote>(https://cran.r-project.org/web/packages/janeaustenr/index.html)</footnote>
+
+```{r message=FALSE, echo=TRUE}
+library(janeaustenr)
+library(stringr)
+```
+
+```{r echo=TRUE}
+original_books <- austen_books() %>% 
+  group_by(book) %>% 
+  mutate(linenumber = row_number(),
+         #detect Roman numerals after "chapter" in the `text` column
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
+                   ignore_case = TRUE)))) %>%  
+  #matches Roman numerals after "Chapter"
+  ungroup()
+```
+
+
+## Tidying Jane Austen's books
+
+```{r echo=TRUE}
+original_books
+```
+
+
+## Convert to a one-token per row format
+
+```{r echo=TRUE}
+(tidy_books <- original_books %>% 
+  unnest_tokens(word, text))
+```
+
+## Removing stopwords
+
+```{r echo=TRUE}
+tidytext::stop_words
+```
+
+## Removing stopwords
+
+We can use `dplyr`'s `anti_join()` function to perform the removal:
+```{r echo=TRUE, message=FALSE}
+(tidy_books <- tidy_books %>% 
+  anti_join(stop_words))
+```
+
+## Using `count()` to find most common words
+
+```{r echo=TRUE}
+(tidy_books %>%
+dplyr::count(word, sort = TRUE))
+```
+
+## Plot the most frequent words across the novels
+
+```{r, echo=TRUE, message=FALSE}
+library(ggplot2)
+top_words_austen <- tidy_books %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 600) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  theme_light() +
+  labs(title = "Top Frequent Words in Jane Austen's novels")
+```
+
+## Plot the most frequent words across the novels
+
+```{r, message=FALSE}
+tidy_books %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 600) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  theme_light() +
+  labs(title = "Top Frequent Words in Jane Austen's novels")
+```
+
+
+## Removing other words from text
+
+```{r echo=TRUE}
+tidy_books_clean <- tidy_books %>%
+  anti_join(tibble(word = c("miss", "lady", "sir", "dear")), 
+            by = "word") %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 550) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  theme_light() +
+  labs(title = "Top Frequent Words in Jane Austen's novels")
+```
+
+## Removing other words from text
+
+```{r, echo=TRUE}
+tidy_books_clean
+```
+
+## Lexicons
+
+There are four lexicons avaliable in the `tidytext` package
+
+- Afinn, Bing, Loughran-MacDonald, and NRC
+
+```{r, echo=TRUE, results='hide'}
+get_sentiments(lexicon = c("afinn", "bing", "loughran", "nrc"))
+```
+
+- While they may share similar words, each has different word counts and associated values (subjectivity, polarity, and intensity)
+
+> - <b> Validation:</b> some were validated individually by the authors while some resorted to crowdsourcing, for instance, via Mechanical Turks.
+
+## The Afinn lexicon
+
+AFINN was developed by Finn Arup Nielsen. It includes 2477 terms and terms are rated between -5 to 5.
+
+```{r echo=TRUE}
+get_sentiments("afinn") %>% count(value)
+```
+
+## The Bing lexicon
+
+Bing was developed by Bing Liu and colleagues. It contains 6786 terms, 2005 are rated positive and 4781 negative.
+
+```{r, echo=TRUE}
+get_sentiments("bing") %>% 
+  count(sentiment)
+```
+
+## The Loughran-McDonald lexicon
+
+Developed by Tim Loughran and Bill McDonald. The lexicon was constructed for use in finance and law. It contains 4150 terms and identifies four emotions and sentiment (positive and negative).
+
+```{r echo=TRUE}
+get_sentiments("loughran") %>% 
+  count(sentiment)
+```
+
+## The NRC lexicon
+
+The NRC lexicon includes ratings for 13901 terms and rates terms on sentiment (positive and negative) and on eight emotions, some with overlap.
+
+```{r, echo=TRUE} 
+get_sentiments("nrc") %>% count(sentiment)
+```
+
+## `dplyr`'s `inner_join()`
+
+`inner_join()` allows us to merge the sentiment dictonaries to our dataset, in effect being the function that performs the lexicon-based sentiment analysis approach.
+
+![](Images/join-inner.png)
+
+</br>
+An inner join matches pairs of observations whenever their keys are equal.<footnote>Wickham, H. & Grolemund, G. (2017). R for Data Science. Import, Tidy, Transform, Visualize, and Model Data. O'Reilly: Sebastopol, CA.</footnote>
+
+## `dplyr`'s `inner_join()`
+
+Save the lexicon to a data frame:
+
+```{r echo=TRUE}
+(nrc <- get_sentiments("nrc"))
+```
+
+## `dplyr`'s `inner_join()`
+
+Since we already tokenized Jane Austen's books with the `unnest_tokens()`, performed the stopwords removal via `anti_join()`, we can now perform sentiment analysis by merging the `nrc` lexicon with the data.
+
+```{r echo=TRUE}
+jane_austen_nrc <- inner_join(x = tidy_books,
+                              y = nrc,
+                              by = "word")
+```
+
+or:
+
+```{r echo=TRUE, message=FALSE}
+jane_austen_nrc <- tidy_books %>% 
+  inner_join(nrc)
+```
+
+## Jane Austen & `NRC`
+
+Notice how some words have more than two sentiments (e.g., line 8 and 9)
+
+```{r}
+jane_austen_nrc
+```
+
+## Filtering for a particular emotion:
+
+Use `dplyr`'s `filter()` function:
+
+```{r echo=TRUE}
+jane_austen_nrc %>% 
+  filter(sentiment == "joy")
+```
+
+## Filtering for a sentiment in a particular book:
+
+Filter both the sentiment and the particular book:
+
+```{r echo=TRUE}
+jane_austen_nrc %>% 
+  filter(sentiment == "positive", book == "Emma")
+```
+
+## Filtering, grouping, and counting
+
+```{r, echo=TRUE}
+jane_austen_nrc %>% filter(sentiment == c("positive", "negative")) %>% 
+  group_by(book, sentiment) %>% count()
+```
+
+## Visualizing the `NRC` sentiment analysis
+
+```{r echo=TRUE}
+library(tidyr)
+```
+
+```{r, echo=TRUE, eval = FALSE}
+jane_austen_nrc %>% 
+  filter(sentiment == c("positive", "negative")) %>% 
+  group_by(book, sentiment) %>% 
+  count(book, index = linenumber %/% 80, sentiment) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive - negative) %>% 
+  ggplot(aes(index,
+             sentiment,
+             fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ book, ncol = 2, scales = "free_x") +
+  labs(title = "Sentiment Analysis of Jane Austen's novels")
+```
+
+## Visualizing the `NRC` sentiment analysis
+
+```{r}
+jane_austen_nrc %>% 
+  filter(sentiment == c("positive", "negative")) %>% 
+  group_by(book, sentiment) %>% 
+  count(book, index = linenumber %/% 80, sentiment) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive - negative) %>% 
+  ggplot(aes(index,
+             sentiment,
+             fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ book, ncol = 2, scales = "free_x") +
+  labs(title = "Sentiment Analysis of Jane Austen's novels")
+```
+
+
+## Which are the most positive and negative words
+
+```{r, message=FALSE}
+jane_austen_nrc %>% 
+  count(word, sentiment, sort = TRUE) %>% 
+  ungroup() %>% 
+  group_by(sentiment) %>% 
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n, fill = sentiment)) +
+    geom_col(show.legend = FALSE) +
+    facet_wrap(~ sentiment, scales = "free_y") +
+    coord_flip() +
+    labs(y = "Contribution to Sentiment",
+         x = NULL)
+
+```
+
+## Comparison Cloud with the Bing lexicon
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+library(reshape2)
+library(wordcloud)
+```
+
+```{r echo=TRUE, eval=FALSE}
+tidy_books %>%
+  inner_join(get_sentiments("bing"), by = "word") %>% 
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>% 
+  comparison.cloud(colors = c("gray2", "gray80"),
+                   max.words = 100)
+```
+
+## Comparison Cloud with the Bing lexicon
+
+```{r}
+tidy_books %>%
+  inner_join(get_sentiments("bing"), by = "word") %>% 
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>% 
+  comparison.cloud(colors = c("gray2", "gray80"),
+                   max.words = 100)
+```
+
+## Wordclouds with the Bing lexicon
+
+```{r echo = TRUE}
+tidy_books %>%
+  inner_join(get_sentiments("bing"), by = "word") %>%
+  count(word) %>% 
+  with(wordcloud(word, n, max.words = 100))
+```
+
+## Sentiment Analysis applied to customer reviews
+
+Goal: Understand how customers feel about their roomba product purchase.
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+library(readr)
+(roomba_Reviews <- read_csv("Roomba Reviews.csv") %>% 
+  select(Product, Stars, Review))
+```
+
+## Tidying it up!
+
+```{r, echo=TRUE, message=FALSE}
+  
+(roomba_tidy <- roomba_Reviews %>% 
+  unnest_tokens(word, Review) %>% 
+  anti_join(stop_words) %>% 
+  filter(!word== c("roomba"))) #remove common word
+```
+
+## Sentiment Analysis using the Bing lexicon
+
+```{r echo=TRUE, message=FALSE}
+(roomba_bing <- roomba_tidy %>% 
+ inner_join(get_sentiments("bing")))
+```
+
+
+## Sentiment across the reviews per product
+
+```{r}
+roomba_bing %>% 
+  count(Product, index = row_number() %/% 40, sentiment) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive - negative) %>% 
+  ggplot(aes(index, sentiment, fill = Product)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ Product, scales = "free_x")
+```
+
+## Most frequently used words per product
+
+For the iRobot Roomba 650 for Pets:
+
+```{r echo=TRUE, message=FALSE, eval=FALSE}
+roomba_bing %>% 
+  filter(Product == "iRobot Roomba 650 for Pets") %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 50) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(title = "Top Words for iRobot Roomba 650 for Pets")
+```
+
+## iRobot Roomba 650 for Pets:
+
+```{r, message=FALSE}
+roomba_bing %>% 
+  filter(Product == "iRobot Roomba 650 for Pets") %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 50) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(title = "Top Words for iRobot Roomba 650 for Pets")
+```
+
+## iRobot Roomba 880 for Pets and Allergies:
+
+```{r echo=TRUE, message=FALSE, eval=FALSE}
+roomba_bing %>% 
+  filter(Product == "iRobot Roomba 880 for Pets and Allergies") %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 200) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(title = "Top Words for iRobot Roomba 880 for Pets and Allergies")
+```
+
+## iRobot Roomba 880 for Pets and Allergies:
+
+```{r echo=FALSE, message=FALSE}
+roomba_bing %>% 
+  filter(Product == "iRobot Roomba 880 for Pets and Allergies") %>% 
+  count(word, sort = TRUE) %>% 
+  filter(n > 200) %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip() +
+  labs(title = "Top Words for iRobot Roomba 880 for Pets and Allergies")
+```
+
+
+## Final Considerations
+
+
+
+## References:
+
+Liu, B. & Zhang, L. (2012). Mining Text Data. Springer: Boston, MA.
+
+Silge, J. & Robinson, D. (2017). Text Mining with R. O'Reilly: Sebastapol, CA.
+
+Wickham, H. & Grolemund, G. (2017). R for Data Science. Import, Tidy, Transform, Visualize, and Model Data. O'Reilly: Sebastopol, CA.
